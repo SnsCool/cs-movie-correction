@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo view:*)",
+      "Bash(gh secret list:*)",
+      "Bash(gh auth status:*)",
+      "Bash(gh auth switch:*)",
+      "Bash(gh secret set:*)",
+      "WebSearch",
+      "Bash(ZOOM_TOKEN=\"eyJzdiI6IjAwMDAwMiIsImFsZyI6IkhTNTEyIiwidiI6IjIuMCIsImtpZCI6IjRjOGZmODI1LWE1YzYtNDNlZS04ZjYwLWE0YzUyYjcyN2MzMiJ9.eyJhdWQiOiJodHRwczovL29hdXRoLnpvb20udXMiLCJ1aWQiOiI5bDJDd3UwNlQ5dUUzR21vSGtZQUxnIiwidmVyIjoxMCwiYXVpZCI6IjliNGY1YTFhZTZlMzc4ZWVkNGM0ZjRiYWQ2OGNmNzEzY2FhMTI5ZjQ2NzllNjQwMTU2NzAzMDlmNTMzYjM0YzkiLCJuYmYiOjE3NzA0NDM5MjgsImNvZGUiOiJtVDVXNzgybFNXNjU3SG9WckRWd19BaFNOMjMzQk8ySXAiLCJpc3MiOiJ6bTpjaWQ6MHc4OHE5NWlTUTYwUmxGNTVIY0t3IiwiZ25vIjowLCJleHAiOjE3NzA0NDc1MjgsInR5cGUiOjMsImlhdCI6MTc3MDQ0MzkyOCwiYWlkIjoiXzBseERrRlVTV1d0MDM2bVRlN0V5QSJ9.59XRLwyBqFbzJvFV6B3OdkAUgOhVCJAsNi3zsPQeat-0IUbwTQH_xJM3sQHDZhVBXL8FV5HrLKkWH-s5yhnmUw\")",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(pip3 install:*)",
+      "WebFetch(domain:ai.google.dev)",
+      "WebFetch(domain:dev.to)",
+      "Bash(done)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:shared-beak-b34.notion.site)",
+      "Bash(echo:*)",
+      "Bash(test:*)",
+      "Bash(wc:*)",
+      "Bash(git -C /Users/hatakiyoto/cs-movie-correction status)",
+      "Bash(git -C /Users/hatakiyoto/cs-movie-correction diff HEAD)",
+      "Bash(git -C /Users/hatakiyoto/cs-movie-correction log --oneline -5)"
+    ]
+  }
+}

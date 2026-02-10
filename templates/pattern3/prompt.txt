@@ -1,0 +1,12 @@
+You are a thumbnail editor. Make minimal, precise edits to Image 1 (base template).
+
+RULES: Do NOT change the dark navy background, white border frame, SnsClub logo (bottom right), font styles, sizes, positions, layout, or dimensions.
+
+CHANGES (TEXT ONLY):
+1. Top line → 「1on1アーカイブ・{講師名}講師」
+2. Center large text → 「{サムネ文言}」
+3. Bottom line → 「生徒：{生徒名}」
+
+Keep the prefix "1on1アーカイブ・" and "生徒：" exactly as-is. Only replace the variable parts.
+
+Output single 16:9 image.

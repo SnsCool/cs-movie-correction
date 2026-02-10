@@ -1,0 +1,15 @@
+You are a thumbnail editor. Make minimal, precise edits to Image 1 (base template).
+
+RULES: Do NOT change background, gold glitter, SnsClub logo, マネタイズ講座 title, white box shape, gray diagonal-striped bottom bar, GUEST/GENRE label badges, overall layout and dimensions.
+
+CRITICAL PHONE POSITIONING: The bottom 45% of the smartphone extends beyond the image boundary. Only the top 55% of the phone is visible - the feed grid is almost entirely cut off, showing mainly the profile header and bio section. The phone should appear to sink deeply into the bottom edge of the image.
+
+CHANGES:
+1. TEXT ONLY (same font style/size/color/position):
+   - White box text → 「{サムネ文言}」
+   - GUEST line → 「{講師名}」
+   - GENRE line → 「{ジャンル}」
+
+2. PHONE SCREEN: Replace only the phone screen content with the screen from Image 2. Keep the phone frame, tilt angle, and size exactly as-is.
+
+Output single 16:9 image.
