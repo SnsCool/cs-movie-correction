@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SNS Club - 動画情報入力</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>動画情報入力</h1>
+      <p class="subtitle">Zoom録画前に入力してください</p>
+    </header>
+
+    {% if errors %}
+    <div class="error-box">
+      {% for e in errors %}
+      <p>{{ e }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form action="/submit" method="POST">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <!-- パターン選択 (ドロップダウン画像ピッカー) -->
+      <section class="form-section">
+        <label class="section-label">テンプレートパターン <span class="required">*</span></label>
+        <div class="image-picker" id="pattern-picker">
+          <details>
+            <summary class="picker-trigger">
+              <img class="selected-preview selected-preview--wide" src="" alt="" style="display:none;">
+              <span class="selected-label" style="display:none;"></span>
+              <span class="placeholder">パターンを選択</span>
+              <span class="chevron"></span>
+            </summary>
+            <div class="picker-dropdown">
+              <div class="picker-grid picker-grid--wide">
+                {% for tpl in templates %}
+                <button type="button" class="picker-option" data-value="{{ tpl.name }}" data-label="{{ tpl.name }}" data-desc="{{ tpl.description }}">
+                  <img src="{{ tpl.preview_url }}" alt="{{ tpl.name }}" loading="lazy">
+                  <span class="picker-option-label">{{ tpl.name }}</span>
+                  <span class="picker-option-desc">{{ tpl.description }}</span>
+                </button>
+                {% endfor %}
+              </div>
+            </div>
+          </details>
+          <input type="hidden" name="pattern" value="{{ form_data.get('pattern', '') if form_data else '' }}">
+        </div>
+      </section>
+
+      <!-- 基本情報 -->
+      <section class="form-section">
+        <label class="section-label" for="title">タイトル <span class="required">*</span></label>
+        <input type="text" id="title" name="title" placeholder="例: グルコン｜ちゃみ講師"
+          value="{{ form_data.get('title', '') if form_data else '' }}" required>
+      </section>
+
+      <section class="form-section">
+        <label class="section-label" for="thumbnail_text">サムネ文言 <span class="required">*</span></label>
+        <textarea id="thumbnail_text" name="thumbnail_text" rows="2"
+          placeholder="例: 今月の献立" required>{{ form_data.get('thumbnail_text', '') if form_data else '' }}</textarea>
+      </section>
+
+      <section class="form-section">
+        <label class="section-label" for="category">種別 <span class="required">*</span></label>
+        <select id="category" name="category" required>
+          <option value="">選択してください</option>
+          {% set cat_val = form_data.get('category', '') if form_data else '' %}
+          <option value="1on1" {% if cat_val == '1on1' %}selected{% endif %}>1on1</option>
+          <option value="グルコン" {% if cat_val == 'グルコン' %}selected{% endif %}>グルコン</option>
+          <option value="講座" {% if cat_val == '講座' %}selected{% endif %}>講座</option>
+        </select>
+      </section>
+
+      <section class="form-section">
+        <label class="section-label" for="start_time">開始時間 <span class="required">*</span></label>
+        <input type="datetime-local" id="start_time" name="start_time"
+          value="{{ form_data.get('start_time', '') if form_data else '' }}" required>
+      </section>
+
+      <!-- ====== パターン1用: 講師名 + 画像左右2枠 ====== -->
+      <div id="pattern1-fields" style="display:none;">
+        <section class="form-section">
+          <label class="section-label" for="lecturer_name">講師名</label>
+          <input type="text" id="lecturer_name" name="lecturer_name" placeholder="例: 陸講師×はなこ講師"
+            value="{{ form_data.get('lecturer_name', '') if form_data else '' }}">
+        </section>
+        <section class="form-section">
+          <label class="section-label">講師画像（左）</label>
+          <div class="image-picker" id="image-left-picker">
+            <details>
+              <summary class="picker-trigger">
+                <img class="selected-preview selected-preview--circle" src="" alt="" style="display:none;">
+                <span class="selected-label" style="display:none;"></span>
+                <span class="placeholder">左の講師画像を選択</span>
+                <span class="chevron"></span>
+              </summary>
+              <div class="picker-dropdown">
+                <div class="picker-grid picker-grid--circle">
+                  {% for img in lecturers if img.type == '1人' %}
+                  <button type="button" class="picker-option picker-option--circle" data-value="{{ img.filename }}" data-label="{{ img.label }}">
+                    <img src="{{ img.url }}" alt="{{ img.label }}" loading="lazy">
+                    <span class="picker-option-label">{{ img.label }}</span>
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+            <input type="hidden" name="lecturer_image1" value="{{ form_data.get('lecturer_image1', '') if form_data else '' }}">
+          </div>
+        </section>
+        <section class="form-section">
+          <label class="section-label">講師画像（右）</label>
+          <div class="image-picker" id="image-right-picker">
+            <details>
+              <summary class="picker-trigger">
+                <img class="selected-preview selected-preview--circle" src="" alt="" style="display:none;">
+                <span class="selected-label" style="display:none;"></span>
+                <span class="placeholder">右の講師画像を選択</span>
+                <span class="chevron"></span>
+              </summary>
+              <div class="picker-dropdown">
+                <div class="picker-grid picker-grid--circle">
+                  {% for img in lecturers if img.type == '1人' %}
+                  <button type="button" class="picker-option picker-option--circle" data-value="{{ img.filename }}" data-label="{{ img.label }}">
+                    <img src="{{ img.url }}" alt="{{ img.label }}" loading="lazy">
+                    <span class="picker-option-label">{{ img.label }}</span>
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+            <input type="hidden" name="lecturer_image2" value="{{ form_data.get('lecturer_image2', '') if form_data else '' }}">
+          </div>
+        </section>
+      </div>
+
+      <!-- ====== パターン2用: 講師名 + 画像1枠 ====== -->
+      <div id="pattern2-fields" style="display:none;">
+        <section class="form-section">
+          <label class="section-label" for="lecturer_name_p2">講師名</label>
+          <input type="text" id="lecturer_name_p2" name="lecturer_name_p2" placeholder="例: はなこ講師"
+            value="{{ form_data.get('lecturer_name_p2', '') if form_data else '' }}">
+        </section>
+        <section class="form-section">
+          <label class="section-label">講師画像</label>
+          <div class="image-picker" id="image-single-picker">
+            <details>
+              <summary class="picker-trigger">
+                <img class="selected-preview selected-preview--circle" src="" alt="" style="display:none;">
+                <span class="selected-label" style="display:none;"></span>
+                <span class="placeholder">講師画像を選択</span>
+                <span class="chevron"></span>
+              </summary>
+              <div class="picker-dropdown">
+                <div class="picker-grid picker-grid--circle">
+                  {% for img in lecturers if img.type == '1人' %}
+                  <button type="button" class="picker-option picker-option--circle" data-value="{{ img.filename }}" data-label="{{ img.label }}">
+                    <img src="{{ img.url }}" alt="{{ img.label }}" loading="lazy">
+                    <span class="picker-option-label">{{ img.label }}</span>
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+            <input type="hidden" name="lecturer_image_single" value="{{ form_data.get('lecturer_image_single', '') if form_data else '' }}">
+          </div>
+        </section>
+      </div>
+
+      <!-- ====== パターン3用: 講師名 + 生徒名（テキストのみ） ====== -->
+      <div id="pattern3-fields" style="display:none;">
+        <section class="form-section">
+          <label class="section-label" for="lecturer_name_p3">講師名</label>
+          <input type="text" id="lecturer_name_p3" name="lecturer_name_p3" placeholder="例: みくぽん"
+            value="{{ form_data.get('lecturer_name_p3', '') if form_data else '' }}">
+        </section>
+        <section class="form-section">
+          <label class="section-label" for="student_name">生徒名</label>
+          <input type="text" id="student_name" name="student_name" placeholder="例: えむさん"
+            value="{{ form_data.get('student_name', '') if form_data else '' }}">
+        </section>
+      </div>
+
+      <button type="submit" class="btn-submit">送信する</button>
+    </form>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/form.js') }}"></script>
+</body>
+</html>

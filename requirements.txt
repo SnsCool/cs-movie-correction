@@ -1,3 +1,5 @@
 requests
 python-dateutil
 python-dotenv
+flask
+gunicorn

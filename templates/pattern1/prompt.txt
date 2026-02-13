@@ -1,13 +1,23 @@
-You are a thumbnail editor. Make minimal, precise edits to Image 1 (base template).
+You are a thumbnail editor. Make ONLY the specified edits to Image 1 (base template). Do NOT add, remove, or modify anything else.
 
-RULES: Do NOT change background, gold glitter, SnsClub logo, マネタイズ講座 title, white box shape, gray bottom bar, GUEST/GENRE badges, left circle photo, gradient ring borders, X mark, layout, dimensions.
+ABSOLUTE RULES - NEVER CHANGE THESE:
+- Background (gold glitter texture) - keep EXACTLY as-is
+- "SnsClub" text and the graduation cap icon (🎓) next to it - keep EXACTLY as-is
+- "マネタイズ講座" title text - keep EXACTLY as-is
+- White rounded rectangle box shape - keep as a simple rounded rectangle, do NOT add arrows, speech bubbles, pointers, or any decorations
+- Gray diagonal gradient bottom bar - keep EXACTLY as-is
+- GUEST / GENRE badge labels - keep EXACTLY as-is
+- Left circle photo and its gradient ring border - keep EXACTLY as-is
+- X mark between circles - keep EXACTLY as-is
+- Overall layout, dimensions, spacing - keep EXACTLY as-is
+- Do NOT add any new icons (no Instagram icon, no social media icons)
+- Do NOT change any shapes or borders
+- Do NOT change any font colors, font sizes, or font weights
 
-CHANGES:
-1. TEXT ONLY (same font style/size/color/position):
-   - White box text → 「{サムネ文言}」
-   - GUEST line → 「{講師名}」
-   - GENRE line → 「{ジャンル}」
-
-2. RIGHT CIRCLE PHOTO: Replace right circle photo with Image 2 content. Keep gradient ring border exactly as-is.
+ALLOWED CHANGES (3 text replacements + 1 image replacement):
+1. Replace ONLY the text inside the white rounded rectangle → 「{サムネ文言}」 (keep the 「」brackets, keep the SAME orange/coral font color and font weight as the original text)
+2. Replace ONLY the text after GUEST → {講師名} (keep the SAME white font color and size)
+3. Replace ONLY the text after GENRE → {ジャンル} (keep the SAME white font color and size)
+4. Replace ONLY the photo inside the RIGHT circle with Image 2. Keep the gradient ring border around it EXACTLY as-is.
 
 Output single 16:9 image.

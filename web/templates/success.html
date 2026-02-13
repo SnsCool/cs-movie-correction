@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SNS Club - 入力完了</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="container">
+    {% if error %}
+    <div class="result-card error-card">
+      <div class="result-icon">!</div>
+      <h2>エラーが発生しました</h2>
+      <p>{{ error }}</p>
+      <a href="/" class="btn-submit">戻る</a>
+    </div>
+    {% else %}
+    <div class="result-card success-card">
+      <div class="result-icon">OK</div>
+      <h2>入力完了</h2>
+      <div class="result-details">
+        <p><strong>タイトル:</strong> {{ title }}</p>
+        <p><strong>種別:</strong> {{ category }}</p>
+        <p><strong>パターン:</strong> {{ pattern }}</p>
+      </div>
+      <p class="result-note">ステータス「入力済み」で保存されました。<br>Zoom録画完了後、自動処理が開始されます。</p>
+      <div class="result-actions">
+        <a href="{{ notion_url }}" target="_blank" class="btn-link">Notionで確認</a>
+        <a href="/" class="btn-submit">新規入力</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>

@@ -25,7 +25,7 @@ NOTION_MASTER_DB_ID = os.environ.get(
     "NOTION_MASTER_DB_ID", "300f3b0f-ba85-81a7-b097-e41110ce3148"
 )
 NOTION_VIDEO_DB_ID = os.environ.get(
-    "NOTION_VIDEO_DB_ID", "301f3b0f-ba85-815a-a696-d4836fe88bb6"
+    "NOTION_VIDEO_DB_ID", "306f3b0f-ba85-81df-b1d5-c50fa215c62a"
 )
 
 BASE_URL = "https://api.notion.com/v1"
@@ -301,7 +301,7 @@ def create_video_record(
     """
     properties: dict[str, Any] = {
         "動画タイトル": {"title": [{"text": {"content": title}}]},
-        "タグ": {"select": {"name": category}},
+        "タグ": {"multi_select": [{"name": category}]},
         "日付": {"date": {"start": date}},
         "講師名": {"select": {"name": lecturer}},
         "YouTubeリンク": {"url": youtube_url},
@@ -336,6 +336,13 @@ def create_video_record(
         "children": children,
     }
 
+    # Set cover image for gallery view display
+    if thumbnail_url:
+        payload["cover"] = {
+            "type": "external",
+            "external": {"url": thumbnail_url},
+        }
+
     url = f"{BASE_URL}/pages"
     logger.info("Creating video record: title=%s category=%s", title, category)
     resp = requests.post(url, headers=_headers(), json=payload, timeout=30)
@@ -344,6 +351,88 @@ def create_video_record(
     page = resp.json()
     page_id = page["id"]
     logger.info("Created video record: page_id=%s", page_id)
+    return page_id
+
+
+def create_master_record(
+    title: str,
+    thumbnail_text: str,
+    category: str,
+    start_time: str,
+    lecturer_name: str,
+    lecturer_image1: str = "",
+    lecturer_image2: str = "",
+    genre: str = "",
+    pattern: str = "",
+    student_name: str = "",
+    notes: str = "",
+) -> str:
+    """Create a new record in the マスターテーブル DB with ステータス=入力済み.
+
+    Parameters
+    ----------
+    title:
+        動画タイトル.
+    thumbnail_text:
+        サムネイル中央のテキスト.
+    category:
+        種別 (1on1 / グルコン / 講座).
+    start_time:
+        ISO 8601 datetime string for 開始時間.
+    lecturer_name:
+        講師名 (GUEST表示名).
+    lecturer_image1:
+        講師画像① の select 値.
+    lecturer_image2:
+        講師画像② の select 値.
+    genre:
+        ジャンル の select 値.
+    pattern:
+        パターン の select 値 (対談 / グルコン / 1on1).
+    student_name:
+        生徒名 (1on1 の場合のみ).
+    notes:
+        補足情報.
+
+    Returns
+    -------
+    The page_id of the newly created record.
+    """
+    properties: dict[str, Any] = {
+        "タイトル": {"title": [{"text": {"content": title}}]},
+        "サムネ文言": {"rich_text": [{"text": {"content": thumbnail_text}}]},
+        "種別": {"select": {"name": category}},
+        "開始時間": {"date": {"start": start_time}},
+        "講師名": {"rich_text": [{"text": {"content": lecturer_name}}]},
+        "ステータス": {"select": {"name": "入力済み"}},
+    }
+
+    if lecturer_image1:
+        properties["講師画像①"] = {"select": {"name": lecturer_image1}}
+    if lecturer_image2:
+        properties["講師画像②"] = {"select": {"name": lecturer_image2}}
+    if genre:
+        properties["ジャンル"] = {"select": {"name": genre}}
+    if pattern:
+        properties["パターン"] = {"select": {"name": pattern}}
+    if student_name:
+        properties["生徒名"] = {"rich_text": [{"text": {"content": student_name}}]}
+    if notes:
+        properties["補足情報"] = {"rich_text": [{"text": {"content": notes}}]}
+
+    payload: dict[str, Any] = {
+        "parent": {"database_id": NOTION_MASTER_DB_ID},
+        "properties": properties,
+    }
+
+    url = f"{BASE_URL}/pages"
+    logger.info("Creating master record: title=%s category=%s", title, category)
+    resp = requests.post(url, headers=_headers(), json=payload, timeout=30)
+    resp.raise_for_status()
+
+    page = resp.json()
+    page_id = page["id"]
+    logger.info("Created master record: page_id=%s", page_id)
     return page_id
 
 

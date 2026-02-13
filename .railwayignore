@@ -1,0 +1,20 @@
+.git
+.env
+.claude
+.venv
+.playwright-data
+__pycache__
+*.pyc
+node_modules
+
+# Large asset files not needed for deployment
+assets/generated/
+assets/sample_*
+assets/temp_*
+assets/test_*
+assets/pattern2_*
+assets/template_*
+assets/*.png
+
+# Docs
+docs/

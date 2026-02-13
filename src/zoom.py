@@ -21,6 +21,7 @@ ZOOM_API_BASE = "https://api.zoom.us/v2"
 
 ACCEPTED_RECORDING_TYPES = {
     "shared_screen_with_speaker_view",
+    "shared_screen_with_speaker_view(CC)",
     "active_speaker",
 }
 

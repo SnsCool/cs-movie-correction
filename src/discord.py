@@ -20,33 +20,58 @@ def _build_embed(
     thumbnail_url: str,
     lecturer: str,
     category: str,
+    notion_url: str = "",
+    genre: str = "",
+    thumbnail_text: str = "",
+    student_name: str = "",
 ) -> dict:
     """Build a Discord embed object.
 
     Args:
         title: Video title used as the embed description.
         youtube_url: YouTube video URL used as the embed link.
-        thumbnail_url: Thumbnail image URL.
+        thumbnail_url: Thumbnail image URL (displayed as large image).
         lecturer: Lecturer / instructor name.
         category: Content category label.
+        notion_url: URL to the Notion master page.
+        genre: Genre label from the master table.
+        thumbnail_text: Thumbnail text from the master table.
+        student_name: Student name (for 1on1 sessions only).
 
     Returns:
         A dict representing a single Discord embed object.
     """
     embed: dict = {
-        "title": "新しい動画がアップロードされました",
+        "title": "\U0001f3ac 新しい動画がアップロードされました",
         "description": title,
         "url": youtube_url,
-        "color": 5814783,
-        "fields": [
-            {"name": "講師", "value": lecturer or "未設定", "inline": True},
-            {"name": "種別", "value": category or "未設定", "inline": True},
-        ],
+        "color": 0x58ACFF,
     }
 
     if thumbnail_url:
-        embed["thumbnail"] = {"url": thumbnail_url}
+        embed["image"] = {"url": thumbnail_url}
 
+    fields = [
+        {"name": "講師", "value": lecturer or "未設定", "inline": True},
+        {"name": "種別", "value": category or "未設定", "inline": True},
+    ]
+
+    if genre:
+        fields.append({"name": "ジャンル", "value": genre, "inline": True})
+    if thumbnail_text:
+        fields.append({"name": "サムネ文言", "value": thumbnail_text, "inline": False})
+    if student_name:
+        fields.append({"name": "生徒名", "value": student_name, "inline": True})
+
+    fields.append(
+        {"name": "YouTube", "value": f"[▶ YouTubeで視聴]({youtube_url})", "inline": False}
+    )
+    if notion_url:
+        fields.append(
+            {"name": "Notion", "value": f"[📋 Notionで確認]({notion_url})", "inline": False}
+        )
+
+    embed["fields"] = fields
     return embed
 
 
@@ -56,6 +81,10 @@ def send_notification(
     thumbnail_url: str = "",
     lecturer: str = "",
     category: str = "",
+    notion_url: str = "",
+    genre: str = "",
+    thumbnail_text: str = "",
+    student_name: str = "",
 ) -> bool:
     """Send a rich embed notification to Discord via webhook.
 
@@ -67,9 +96,13 @@ def send_notification(
     Args:
         title: Video title.
         youtube_url: YouTube video URL.
-        thumbnail_url: Optional thumbnail image URL.
+        thumbnail_url: Optional thumbnail image URL (large image display).
         lecturer: Optional lecturer / instructor name.
         category: Optional content category.
+        notion_url: Optional URL to the Notion master page.
+        genre: Optional genre label.
+        thumbnail_text: Optional thumbnail text.
+        student_name: Optional student name (for 1on1 sessions).
 
     Returns:
         ``True`` if the webhook request succeeded (HTTP 2xx),
@@ -90,6 +123,10 @@ def send_notification(
             thumbnail_url=thumbnail_url,
             lecturer=lecturer,
             category=category,
+            notion_url=notion_url,
+            genre=genre,
+            thumbnail_text=thumbnail_text,
+            student_name=student_name,
         )
 
         payload: dict = {"embeds": [embed]}

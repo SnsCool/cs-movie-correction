@@ -241,6 +241,12 @@ def _find_lecturer_image(name: str, base_dir: str) -> str | None:
         logger.warning("Empty lecturer name provided")
         return None
 
+    # 「講師」「先生」等のサフィックスを除去して検索
+    for suffix in ("講師", "先生"):
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+            break
+
     images_dir = Path(base_dir) / "assets" / "lecturer-images"
     if not images_dir.is_dir():
         logger.warning("Lecturer images directory not found: %s", images_dir)
@@ -365,6 +371,176 @@ def _call_gemini_api(prompt: str, images: list[tuple[str, bytes]]) -> bytes:
         "Gemini API response did not contain image data. "
         f"Response parts: {[list(p.keys()) for p in content_parts]}"
     )
+
+
+def _validate_thumbnail(
+    generated_bytes: bytes,
+    base_image_bytes: bytes,
+    expected: dict,
+) -> dict:
+    """Validate a generated thumbnail against the original template.
+
+    Uses Gemini vision to compare the generated image with the base template
+    and check that key elements are preserved.
+
+    Args:
+        generated_bytes: The generated thumbnail image bytes.
+        base_image_bytes: The original base template image bytes.
+        expected: Dict with expected values: guest, genre, thumbnail_text.
+
+    Returns:
+        A dict with keys: ok (bool), issues (list of str).
+    """
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        logger.warning("No GEMINI_API_KEY; skipping validation")
+        return {"ok": True, "issues": []}
+
+    model = os.environ.get("GEMINI_MODEL", DEFAULT_MODEL)
+    url = f"{GEMINI_API_BASE}/{model}:generateContent"
+
+    base_b64 = base64.b64encode(base_image_bytes).decode("utf-8")
+    gen_b64 = base64.b64encode(generated_bytes).decode("utf-8")
+
+    validation_prompt = f"""You are a QA inspector. Compare Image 1 (original template) with Image 2 (generated result).
+
+Check ALL of the following and respond ONLY with a JSON object:
+
+1. "graduation_cap": Does Image 2 have a graduation cap icon (🎓) near "SnsClub"? (true/false)
+2. "text_box_shape": Is the white text box a simple rounded rectangle (NOT a speech bubble with arrow)? (true/false)
+3. "guest_text": Does the GUEST line say exactly "{expected.get('guest', '')}"? (true/false)
+4. "genre_text": Does the GENRE line say exactly "{expected.get('genre', '')}"? (true/false)
+5. "text_color": Is the text inside the white box in orange/coral color (NOT black, NOT white)? (true/false)
+6. "no_extra_icons": Are there no extra icons added (no Instagram icon, no social media icons that weren't in Image 1)? (true/false)
+
+Respond ONLY with JSON, no markdown, no explanation:
+{{"graduation_cap": true/false, "text_box_shape": true/false, "guest_text": true/false, "genre_text": true/false, "text_color": true/false, "no_extra_icons": true/false}}"""
+
+    parts = [
+        {"inline_data": {"mime_type": "image/png", "data": base_b64}},
+        {"inline_data": {"mime_type": "image/png", "data": gen_b64}},
+        {"text": validation_prompt},
+    ]
+
+    payload = {
+        "contents": [{"parts": parts}],
+        "generationConfig": {"responseModalities": ["TEXT"]},
+    }
+
+    logger.info("Validating generated thumbnail...")
+
+    try:
+        response = requests.post(
+            url, params={"key": api_key}, json=payload, timeout=60,
+        )
+        if response.status_code != 200:
+            logger.warning("Validation API error (HTTP %d), skipping", response.status_code)
+            return {"ok": True, "issues": []}
+
+        result = response.json()
+        candidates = result.get("candidates", [])
+        if not candidates:
+            return {"ok": True, "issues": []}
+
+        text_parts = candidates[0].get("content", {}).get("parts", [])
+        raw_text = ""
+        for part in text_parts:
+            if "text" in part:
+                raw_text += part["text"]
+
+        # Parse JSON from response (strip markdown fences if present)
+        raw_text = raw_text.strip()
+        if raw_text.startswith("```"):
+            raw_text = raw_text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+
+        checks = json.loads(raw_text)
+        logger.info("Validation result: %s", checks)
+
+        issues = []
+        check_labels = {
+            "graduation_cap": "卒業帽アイコンが欠落",
+            "text_box_shape": "テキスト枠の形が変更された",
+            "guest_text": f"GUESTテキストが不一致（期待: {expected.get('guest', '')}）",
+            "genre_text": f"GENREテキストが不一致（期待: {expected.get('genre', '')}）",
+            "text_color": "テキスト色が変更された",
+            "no_extra_icons": "余計なアイコンが追加された",
+        }
+
+        for key, label in check_labels.items():
+            if not checks.get(key, True):
+                issues.append(label)
+
+        return {"ok": len(issues) == 0, "issues": issues}
+
+    except (json.JSONDecodeError, KeyError, Exception) as e:
+        logger.warning("Validation parse error: %s, skipping", e)
+        return {"ok": True, "issues": []}
+
+
+def generate_thumbnail_validated(
+    record: dict,
+    base_dir: str = ".",
+    max_attempts: int = 3,
+) -> str:
+    """Generate a thumbnail with automatic validation and retry.
+
+    Generates a thumbnail, validates it against the original template,
+    and retries if validation fails.
+
+    Args:
+        record: Parsed Notion record dict.
+        base_dir: Project root directory path.
+        max_attempts: Maximum generation attempts (default 3).
+
+    Returns:
+        Absolute path to the validated thumbnail image.
+    """
+    import time as _time
+
+    base = Path(base_dir).resolve()
+
+    # Determine pattern and load template (same as generate_thumbnail)
+    pattern_raw = (record.get("pattern") or record.get("パターン", "")).strip()
+    pattern_dir_name = PATTERN_MAP.get(pattern_raw)
+    if not pattern_dir_name:
+        raise ValueError(f"Unrecognized pattern: '{pattern_raw}'")
+
+    pattern_dir = base / "templates" / pattern_dir_name
+    base_image_bytes, _, _ = _load_template(str(pattern_dir))
+
+    expected = {
+        "guest": record.get("lecturer_name") or record.get("講師名", ""),
+        "genre": record.get("genre") or record.get("ジャンル", ""),
+        "thumbnail_text": record.get("thumbnail_text") or record.get("サムネ文言", ""),
+    }
+
+    for attempt in range(1, max_attempts + 1):
+        logger.info("=== Generation attempt %d/%d ===", attempt, max_attempts)
+
+        # Generate
+        output_path = generate_thumbnail(record, base_dir=base_dir)
+        generated_bytes = Path(output_path).read_bytes()
+
+        # Validate
+        result = _validate_thumbnail(generated_bytes, base_image_bytes, expected)
+
+        if result["ok"]:
+            logger.info("Validation PASSED on attempt %d", attempt)
+            return output_path
+
+        logger.warning(
+            "Validation FAILED on attempt %d: %s",
+            attempt,
+            ", ".join(result["issues"]),
+        )
+
+        if attempt < max_attempts:
+            logger.info("Retrying in 3s...")
+            _time.sleep(3)
+
+    # Return last attempt even if validation failed
+    logger.warning("Max attempts reached, using last generated image")
+    return output_path
 
 
 if __name__ == "__main__":

@@ -110,16 +110,22 @@ def _process_recording(
     logger.info("Thumbnail set for video %s", video_id)
 
     # 6. Discord notification (never fail) ---------------------------------
-    try:
-        discord_mod.send_notification(
-            title=title,
-            youtube_url=youtube_url,
-            thumbnail_url="",  # local path; Discord embed uses URL
-            lecturer=record.get("lecturer_name", ""),
-            category=record.get("category", ""),
-        )
-    except Exception:
-        logger.exception("Discord notification failed (ignored)")
+    # Build Notion page URL from page_id
+    notion_page_url = f"https://notion.so/{page_id.replace('-', '')}"
+    # Use YouTube auto-generated thumbnail for Discord embed
+    discord_thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/maxresdefault.jpg"
+
+    discord_mod.send_notification(
+        title=title,
+        youtube_url=youtube_url,
+        thumbnail_url=discord_thumbnail_url,
+        lecturer=record.get("lecturer_name", ""),
+        category=record.get("category", ""),
+        notion_url=notion_page_url,
+        genre=record.get("genre", ""),
+        thumbnail_text=record.get("thumbnail_text", ""),
+        student_name=record.get("student_name", ""),
+    )
 
     # 7. Create video archive record ---------------------------------------
     start_date = record.get("start_time", "")[:10]  # ISO date portion
