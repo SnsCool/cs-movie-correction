@@ -21,7 +21,6 @@ def _build_embed(
     lecturer: str,
     category: str,
     notion_url: str = "",
-    genre: str = "",
     thumbnail_text: str = "",
     student_name: str = "",
 ) -> dict:
@@ -34,7 +33,6 @@ def _build_embed(
         lecturer: Lecturer / instructor name.
         category: Content category label.
         notion_url: URL to the Notion master page.
-        genre: Genre label from the master table.
         thumbnail_text: Thumbnail text from the master table.
         student_name: Student name (for 1on1 sessions only).
 
@@ -56,8 +54,6 @@ def _build_embed(
         {"name": "種別", "value": category or "未設定", "inline": True},
     ]
 
-    if genre:
-        fields.append({"name": "ジャンル", "value": genre, "inline": True})
     if thumbnail_text:
         fields.append({"name": "サムネ文言", "value": thumbnail_text, "inline": False})
     if student_name:
@@ -82,7 +78,6 @@ def send_notification(
     lecturer: str = "",
     category: str = "",
     notion_url: str = "",
-    genre: str = "",
     thumbnail_text: str = "",
     student_name: str = "",
 ) -> bool:
@@ -100,7 +95,6 @@ def send_notification(
         lecturer: Optional lecturer / instructor name.
         category: Optional content category.
         notion_url: Optional URL to the Notion master page.
-        genre: Optional genre label.
         thumbnail_text: Optional thumbnail text.
         student_name: Optional student name (for 1on1 sessions).
 
@@ -124,7 +118,6 @@ def send_notification(
             lecturer=lecturer,
             category=category,
             notion_url=notion_url,
-            genre=genre,
             thumbnail_text=thumbnail_text,
             student_name=student_name,
         )

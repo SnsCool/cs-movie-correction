@@ -120,7 +120,7 @@ def parse_master_record(page: dict) -> dict:
     -------
     dict with the following keys:
         page_id, title, thumbnail_text, category, start_time, lecturer_name,
-        lecturer_image1, lecturer_image2, genre, pattern, student_name,
+        lecturer_image1, lecturer_image2, pattern, student_name,
         notes, status, retry_count
     """
     props: dict[str, Any] = page.get("properties", {})
@@ -134,7 +134,6 @@ def parse_master_record(page: dict) -> dict:
         "lecturer_name": _get_rich_text(props.get("講師名", {})),
         "lecturer_image1": _get_select(props.get("講師画像①", {})),
         "lecturer_image2": _get_select(props.get("講師画像②", {})),
-        "genre": _get_select(props.get("ジャンル", {})),
         "pattern": _get_select(props.get("パターン", {})),
         "student_name": _get_rich_text(props.get("生徒名", {})),
         "notes": _get_rich_text(props.get("補足情報", {})),
@@ -362,7 +361,6 @@ def create_master_record(
     lecturer_name: str,
     lecturer_image1: str = "",
     lecturer_image2: str = "",
-    genre: str = "",
     pattern: str = "",
     student_name: str = "",
     notes: str = "",
@@ -385,8 +383,6 @@ def create_master_record(
         講師画像① の select 値.
     lecturer_image2:
         講師画像② の select 値.
-    genre:
-        ジャンル の select 値.
     pattern:
         パターン の select 値 (対談 / グルコン / 1on1).
     student_name:
@@ -411,8 +407,6 @@ def create_master_record(
         properties["講師画像①"] = {"select": {"name": lecturer_image1}}
     if lecturer_image2:
         properties["講師画像②"] = {"select": {"name": lecturer_image2}}
-    if genre:
-        properties["ジャンル"] = {"select": {"name": genre}}
     if pattern:
         properties["パターン"] = {"select": {"name": pattern}}
     if student_name:

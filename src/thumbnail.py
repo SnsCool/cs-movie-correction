@@ -60,7 +60,7 @@ def generate_thumbnail(record: dict, base_dir: str = ".") -> str:
                   - パターン (str): pattern identifier
                   - サムネ文言 (str): thumbnail text
                   - 講師名 (str): lecturer name
-                  - ジャンル (str): genre (patterns 1 & 2)
+                  - 生徒名 (str): student name (pattern 3)
                   - 生徒名 (str): student name (pattern 3)
                   - phone_screen_path (str): path to phone screenshot (pattern 2)
         base_dir: Project root directory path.
@@ -99,7 +99,6 @@ def generate_thumbnail(record: dict, base_dir: str = ".") -> str:
     _var_key_map = {
         "サムネ文言": "thumbnail_text",
         "講師名": "lecturer_name",
-        "ジャンル": "genre",
         "生徒名": "student_name",
     }
     variables = config.get("variables", {})
@@ -125,31 +124,48 @@ def generate_thumbnail(record: dict, base_dir: str = ".") -> str:
     if "image2" in inputs:
         if pattern_dir_name == "pattern1":
             # Pattern 1: lecturer image for right circle
-            lecturer_name = record.get("lecturer_name") or record.get("講師名", "")
-            lecturer_image_path = _find_lecturer_image(lecturer_name, str(base))
-            if not lecturer_image_path:
-                raise FileNotFoundError(
-                    f"No lecturer image found for: '{lecturer_name}'"
-                )
-            logger.info("Using lecturer image: %s", lecturer_image_path)
-            mime = mimetypes.guess_type(lecturer_image_path)[0] or "image/png"
-            images.append((mime, Path(lecturer_image_path).read_bytes()))
+            # Use lecturer_image2 filename from record (set by web form)
+            image2_filename = record.get("lecturer_image2", "")
+            if image2_filename:
+                image2_path = base / "assets" / "lecturer-images" / image2_filename
+                if image2_path.is_file():
+                    logger.info("Using lecturer_image2: %s", image2_path)
+                    mime = mimetypes.guess_type(str(image2_path))[0] or "image/png"
+                    images.append((mime, image2_path.read_bytes()))
+                else:
+                    logger.warning("lecturer_image2 file not found: %s", image2_path)
+            else:
+                # Fallback: search by lecturer_name
+                lecturer_name = record.get("lecturer_name") or record.get("講師名", "")
+                lecturer_image_path = _find_lecturer_image(lecturer_name, str(base))
+                if not lecturer_image_path:
+                    raise FileNotFoundError(
+                        f"No lecturer image found for: '{lecturer_name}'"
+                    )
+                logger.info("Using lecturer image (fallback): %s", lecturer_image_path)
+                mime = mimetypes.guess_type(lecturer_image_path)[0] or "image/png"
+                images.append((mime, Path(lecturer_image_path).read_bytes()))
 
         elif pattern_dir_name == "pattern2":
-            # Pattern 2: phone screen image
+            # Pattern 2: phone screen image or lecturer image
             phone_screen_path = record.get("phone_screen_path", "")
-            if not phone_screen_path:
-                raise ValueError(
-                    "Pattern 2 requires 'phone_screen_path' in record"
-                )
-            phone_path = Path(phone_screen_path)
-            if not phone_path.is_file():
-                raise FileNotFoundError(
-                    f"Phone screen image not found: {phone_screen_path}"
-                )
-            logger.info("Using phone screen image: %s", phone_screen_path)
-            mime = mimetypes.guess_type(str(phone_path))[0] or "image/png"
-            images.append((mime, phone_path.read_bytes()))
+            if phone_screen_path and Path(phone_screen_path).is_file():
+                logger.info("Using phone screen image: %s", phone_screen_path)
+                mime = mimetypes.guess_type(phone_screen_path)[0] or "image/png"
+                images.append((mime, Path(phone_screen_path).read_bytes()))
+            else:
+                # Fallback: use lecturer_image1 from web form
+                image1_filename = record.get("lecturer_image1", "")
+                if image1_filename:
+                    image1_path = base / "assets" / "lecturer-images" / image1_filename
+                    if image1_path.is_file():
+                        logger.info("Using lecturer_image1 as phone screen: %s", image1_path)
+                        mime = mimetypes.guess_type(str(image1_path))[0] or "image/png"
+                        images.append((mime, image1_path.read_bytes()))
+                    else:
+                        logger.warning("No image2 available for pattern2, proceeding without")
+                else:
+                    logger.warning("No image2 available for pattern2, proceeding without")
 
     # --- Call Gemini API (with retry) ---
     import time
@@ -386,7 +402,7 @@ def _validate_thumbnail(
     Args:
         generated_bytes: The generated thumbnail image bytes.
         base_image_bytes: The original base template image bytes.
-        expected: Dict with expected values: guest, genre, thumbnail_text.
+        expected: Dict with expected values: guest, thumbnail_text.
 
     Returns:
         A dict with keys: ok (bool), issues (list of str).
@@ -409,12 +425,11 @@ Check ALL of the following and respond ONLY with a JSON object:
 1. "graduation_cap": Does Image 2 have a graduation cap icon (🎓) near "SnsClub"? (true/false)
 2. "text_box_shape": Is the white text box a simple rounded rectangle (NOT a speech bubble with arrow)? (true/false)
 3. "guest_text": Does the GUEST line say exactly "{expected.get('guest', '')}"? (true/false)
-4. "genre_text": Does the GENRE line say exactly "{expected.get('genre', '')}"? (true/false)
-5. "text_color": Is the text inside the white box in orange/coral color (NOT black, NOT white)? (true/false)
-6. "no_extra_icons": Are there no extra icons added (no Instagram icon, no social media icons that weren't in Image 1)? (true/false)
+4. "text_color": Is the text inside the white box in orange/coral color (NOT black, NOT white)? (true/false)
+5. "no_extra_icons": Are there no extra icons added (no Instagram icon, no social media icons that weren't in Image 1)? (true/false)
 
 Respond ONLY with JSON, no markdown, no explanation:
-{{"graduation_cap": true/false, "text_box_shape": true/false, "guest_text": true/false, "genre_text": true/false, "text_color": true/false, "no_extra_icons": true/false}}"""
+{{"graduation_cap": true/false, "text_box_shape": true/false, "guest_text": true/false, "text_color": true/false, "no_extra_icons": true/false}}"""
 
     parts = [
         {"inline_data": {"mime_type": "image/png", "data": base_b64}},
@@ -461,7 +476,6 @@ Respond ONLY with JSON, no markdown, no explanation:
             "graduation_cap": "卒業帽アイコンが欠落",
             "text_box_shape": "テキスト枠の形が変更された",
             "guest_text": f"GUESTテキストが不一致（期待: {expected.get('guest', '')}）",
-            "genre_text": f"GENREテキストが不一致（期待: {expected.get('genre', '')}）",
             "text_color": "テキスト色が変更された",
             "no_extra_icons": "余計なアイコンが追加された",
         }
@@ -510,7 +524,6 @@ def generate_thumbnail_validated(
 
     expected = {
         "guest": record.get("lecturer_name") or record.get("講師名", ""),
-        "genre": record.get("genre") or record.get("ジャンル", ""),
         "thumbnail_text": record.get("thumbnail_text") or record.get("サムネ文言", ""),
     }
 

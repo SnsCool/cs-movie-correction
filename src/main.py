@@ -122,7 +122,6 @@ def _process_recording(
         lecturer=record.get("lecturer_name", ""),
         category=record.get("category", ""),
         notion_url=notion_page_url,
-        genre=record.get("genre", ""),
         thumbnail_text=record.get("thumbnail_text", ""),
         student_name=record.get("student_name", ""),
     )
