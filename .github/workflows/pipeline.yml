@@ -19,6 +19,9 @@ jobs:
       NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
       NOTION_MASTER_DB_ID: ${{ secrets.NOTION_MASTER_DB_ID }}
       NOTION_VIDEO_DB_ID: ${{ secrets.NOTION_VIDEO_DB_ID }}
+      NOTION_1ON1_DB_ID: ${{ secrets.NOTION_1ON1_DB_ID }}
+      NOTION_GRUCON_DB_ID: ${{ secrets.NOTION_GRUCON_DB_ID }}
+      NOTION_MONETIZE_DB_ID: ${{ secrets.NOTION_MONETIZE_DB_ID }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

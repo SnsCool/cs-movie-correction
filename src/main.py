@@ -137,6 +137,7 @@ def _process_recording(
         lecturer=record.get("lecturer_name", ""),
         youtube_url=youtube_url,
         thumbnail_url=thumbnail_url,
+        student_name=record.get("student_name", ""),
     )
     logger.info("Created video archive record for '%s'", title)
 

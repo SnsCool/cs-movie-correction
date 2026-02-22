@@ -28,6 +28,26 @@ NOTION_VIDEO_DB_ID = os.environ.get(
     "NOTION_VIDEO_DB_ID", "306f3b0f-ba85-81df-b1d5-c50fa215c62a"
 )
 
+# ジャンル別DB ID
+NOTION_1ON1_DB_ID = os.environ.get(
+    "NOTION_1ON1_DB_ID", "308f3b0f-ba85-81d9-8005-d7bfc89fd45b"
+)
+NOTION_GRUCON_DB_ID = os.environ.get(
+    "NOTION_GRUCON_DB_ID", "307f3b0f-ba85-81f4-a746-fa0bc95b90e6"
+)
+NOTION_MONETIZE_DB_ID = os.environ.get(
+    "NOTION_MONETIZE_DB_ID", "263f3b0f-ba85-8076-9dc2-c50cdd9ee30e"
+)
+
+# カテゴリ → ジャンル別DB ID のルーティング
+_GENRE_DB_MAP: dict[str, str] = {
+    "1on1": "NOTION_1ON1_DB_ID",
+    "グルコン": "NOTION_GRUCON_DB_ID",
+    "グループコンサル": "NOTION_GRUCON_DB_ID",
+    "講座": "NOTION_MONETIZE_DB_ID",
+    "講師対談": "NOTION_GRUCON_DB_ID",
+}
+
 BASE_URL = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
 
@@ -269,6 +289,37 @@ def _get_current_retry_count(page_id: str) -> int:
     return _get_number(props.get("リトライ回数", {}))
 
 
+def _thumbnail_files_prop(thumbnail_url: str) -> dict[str, Any]:
+    """Build a サムネイル files property value."""
+    return {
+        "files": [
+            {
+                "name": "thumbnail.png",
+                "type": "external",
+                "external": {"url": thumbnail_url},
+            }
+        ]
+    }
+
+
+def _youtube_embed_block(youtube_url: str) -> dict[str, Any]:
+    """Build a YouTube video embed block."""
+    return {
+        "object": "block",
+        "type": "video",
+        "video": {"type": "external", "external": {"url": youtube_url}},
+    }
+
+
+def _resolve_genre_db_id(category: str) -> str:
+    """Resolve category to a genre-specific DB ID. Returns empty string if not configured."""
+    key = _GENRE_DB_MAP.get(category, "")
+    if not key:
+        return ""
+    db_id = globals().get(key, "")
+    return db_id if db_id else ""
+
+
 def create_video_record(
     title: str,
     category: str,
@@ -276,15 +327,21 @@ def create_video_record(
     lecturer: str,
     youtube_url: str,
     thumbnail_url: str = "",
+    student_name: str = "",
 ) -> str:
-    """Create a new record in the 動画アーカイブ DB and embed a YouTube video block.
+    """Create a new record in the 動画アーカイブ DB and the genre-specific DB.
+
+    Records are always written to the main archive DB. Additionally, if a
+    genre-specific DB is configured for the given *category*, a record is
+    created there as well (dual-write). Genre DB write failures are logged
+    but do not interrupt the pipeline.
 
     Parameters
     ----------
     title:
         Video title (タイトル).
     category:
-        Video category / 種別 (e.g. "1on1添削", "グループコンサル").
+        Video category / 種別 (e.g. "1on1", "グルコン", "グループコンサル").
     date:
         Date string in ISO 8601 format (日付).
     lecturer:
@@ -293,11 +350,14 @@ def create_video_record(
         YouTube video URL (YouTubeリンク).
     thumbnail_url:
         Optional external URL for the thumbnail image (サムネイル).
+    student_name:
+        Student name for 1on1 videos (生徒名).
 
     Returns
     -------
-    The page_id of the newly created record.
+    The page_id of the newly created main archive record.
     """
+    # --- 1. メインアーカイブDB に書き込み（従来どおり） ---
     properties: dict[str, Any] = {
         "動画タイトル": {"title": [{"text": {"content": title}}]},
         "タグ": {"multi_select": [{"name": category}]},
@@ -305,51 +365,60 @@ def create_video_record(
         "講師名": {"select": {"name": lecturer}},
         "YouTubeリンク": {"url": youtube_url},
     }
-
     if thumbnail_url:
-        properties["サムネイル"] = {
-            "files": [
-                {
-                    "name": "thumbnail.png",
-                    "type": "external",
-                    "external": {"url": thumbnail_url},
-                }
-            ]
-        }
+        properties["サムネイル"] = _thumbnail_files_prop(thumbnail_url)
 
-    # Build the YouTube embed block to add as page content
-    children: list[dict[str, Any]] = [
-        {
-            "object": "block",
-            "type": "video",
-            "video": {
-                "type": "external",
-                "external": {"url": youtube_url},
-            },
-        }
-    ]
+    children: list[dict[str, Any]] = [_youtube_embed_block(youtube_url)]
 
     payload: dict[str, Any] = {
         "parent": {"database_id": NOTION_VIDEO_DB_ID},
         "properties": properties,
         "children": children,
     }
-
-    # Set cover image for gallery view display
     if thumbnail_url:
-        payload["cover"] = {
-            "type": "external",
-            "external": {"url": thumbnail_url},
-        }
+        payload["cover"] = {"type": "external", "external": {"url": thumbnail_url}}
 
     url = f"{BASE_URL}/pages"
-    logger.info("Creating video record: title=%s category=%s", title, category)
+    logger.info("Creating video archive record: title=%s category=%s", title, category)
     resp = requests.post(url, headers=_headers(), json=payload, timeout=30)
     resp.raise_for_status()
 
-    page = resp.json()
-    page_id = page["id"]
-    logger.info("Created video record: page_id=%s", page_id)
+    page_id = resp.json()["id"]
+    logger.info("Created video archive record: page_id=%s", page_id)
+
+    # --- 2. ジャンル別DB に書き込み ---
+    genre_db_id = _resolve_genre_db_id(category)
+    if genre_db_id:
+        genre_props: dict[str, Any] = {
+            "動画タイトル": {"title": [{"text": {"content": title}}]},
+            "YouTubeリンク": {"url": youtube_url},
+            "日付": {"date": {"start": date}},
+        }
+        if lecturer:
+            genre_props["講師名"] = {"select": {"name": lecturer}}
+        if student_name and category == "1on1":
+            genre_props["生徒名"] = {"rich_text": [{"text": {"content": student_name}}]}
+        if thumbnail_url:
+            genre_props["サムネイル"] = _thumbnail_files_prop(thumbnail_url)
+
+        genre_payload: dict[str, Any] = {
+            "parent": {"database_id": genre_db_id},
+            "properties": genre_props,
+            "children": [_youtube_embed_block(youtube_url)],
+        }
+        if thumbnail_url:
+            genre_payload["cover"] = {"type": "external", "external": {"url": thumbnail_url}}
+
+        logger.info("Creating genre record in DB %s for category=%s", genre_db_id, category)
+        try:
+            resp2 = requests.post(url, headers=_headers(), json=genre_payload, timeout=30)
+            resp2.raise_for_status()
+            logger.info("Created genre record: page_id=%s", resp2.json()["id"])
+        except Exception:
+            logger.exception("Failed to create genre-specific record (non-fatal)")
+    else:
+        logger.info("No genre DB configured for category=%s; skipping genre write", category)
+
     return page_id
 
 
