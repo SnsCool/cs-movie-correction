@@ -104,16 +104,48 @@ GitHub Actions（6時間ごと）or 手動実行
 受講生が Notion ポータル（Gallery View）から YouTube で視聴
 ```
 
-### 3.2 ジャンル別の格納先
+### 3.2 フォーム選択 → Notion格納先マッピング
 
-パイプライン完了時、動画は以下の2箇所に同時に書き込まれる（デュアルライト）。
+講師がWebフォーム（ https://sns-club-portal-production.up.railway.app ）で「種別」を選ぶと、パイプライン完了時に以下の Notion ページ/DB にレコードが作成される。
 
-| カテゴリ | メインアーカイブDB | ジャンル別DB |
-|---------|:----------------:|:----------:|
-| 1on1 | ○ | 1on1アーカイブDB |
-| グルコン | ○ | グルコンアーカイブDB |
-| 講師対談 | ○ | グルコンアーカイブDB |
-| 講座 | ○ | マネタイズDB |
+#### フォーム「種別」→ 格納先（リンク付き）
+
+| フォームで選択 | メインアーカイブDB（常に格納） | ジャンル別DB（追加で格納） |
+|:------------:|:---:|:---:|
+| **1on1** | [動画アーカイブDB](https://notion.so/306f3b0fba8581dfb1d5c50fa215c62a) | [1on1アーカイブDB](https://notion.so/308f3b0fba8581d98005d7bfc89fd45b) |
+| **グルコン** | [動画アーカイブDB](https://notion.so/306f3b0fba8581dfb1d5c50fa215c62a) | [グルコンアーカイブDB](https://notion.so/307f3b0fba8581f4a746fa0bc95b90e6) |
+| **講座** | [動画アーカイブDB](https://notion.so/306f3b0fba8581dfb1d5c50fa215c62a) | [マネタイズDB](https://notion.so/263f3b0fba858076-9dc2c50cdd9ee30e) |
+
+※ パイプライン内部で「講師対談」と判定された場合もグルコンアーカイブDBに格納される。
+
+#### 格納先Notionページ一覧（リンク）
+
+| ジャンル | Notionページ | インラインDB ID |
+|---------|-------------|----------------|
+| 1on1 | [1on1アーカイブページ](https://notion.so/306f3b0fba8580858fa6d3f642d9dc49) | `308f3b0f-ba85-81d9-8005-d7bfc89fd45b` |
+| グルコン / 講師対談 | [グルコンアーカイブページ](https://notion.so/306f3b0fba858000bc41eaed2d834e21) | `307f3b0f-ba85-81f4-a746-fa0bc95b90e6` |
+| マネタイズ（講座） | [マネタイズ講義ページ](https://notion.so/263f3b0fba85809bb668dfad21e27b6c) | `263f3b0f-ba85-8076-9dc2-c50cdd9ee30e` |
+
+#### 入力〜格納の流れ図
+
+```
+講師がフォームで種別を選択（1on1 / グルコン / 講座）
+        │
+        ▼
+Notion マスターDB にレコード作成
+  https://notion.so/300f3b0fba8581a7b097e41110ce3148
+        │
+        ▼
+パイプライン実行 → 動画処理完了
+        │
+        ├──▶ メインアーカイブDB（全ジャンル統合 / 常に格納）
+        │      https://notion.so/306f3b0fba8581dfb1d5c50fa215c62a
+        │
+        └──▶ ジャンル別DB（選んだ種別に応じて格納）
+               ├── 1on1    → https://notion.so/308f3b0fba8581d98005d7bfc89fd45b
+               ├── グルコン → https://notion.so/307f3b0fba8581f4a746fa0bc95b90e6
+               └── 講座    → https://notion.so/263f3b0fba858076-9dc2c50cdd9ee30e
+```
 
 ### 3.3 エラー時の動き
 
